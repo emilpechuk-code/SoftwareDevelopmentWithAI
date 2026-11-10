@@ -7,7 +7,7 @@ from pathlib import Path
 import httpx
 
 from url_monitor.config import Config
-from url_monitor.cycle import run_cycle
+from url_monitor.loop import run_until_stopped
 from url_monitor.state import UrlState
 from url_monitor.window import SampleWindow
 
@@ -77,11 +77,23 @@ def _make_client() -> httpx.AsyncClient:
     return httpx.AsyncClient()
 
 
-async def _run_once(config: Config, now: datetime, log) -> None:
+async def _sleep(seconds: float) -> None:
+    await asyncio.sleep(seconds)
+
+
+async def _monitor(config: Config, log) -> None:
     window = SampleWindow()
     states: dict[str, UrlState] = {}
     async with _make_client() as client:
-        await run_cycle(config, client, window, states, log, now)
+        await run_until_stopped(
+            config,
+            client,
+            window,
+            states,
+            log,
+            _sleep,
+            lambda: datetime.now(timezone.utc),
+        )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -89,5 +101,8 @@ def main(argv: list[str] | None = None) -> int:
     # argparse exits with code 2 on bad input or --help before the log is created.
     config = parse_args(sys.argv[1:] if argv is None else argv, now)
     with config.log_path.open("x", encoding="utf-8") as log:
-        asyncio.run(_run_once(config, now, log))
+        try:
+            asyncio.run(_monitor(config, log))
+        except KeyboardInterrupt:
+            pass
     return 0

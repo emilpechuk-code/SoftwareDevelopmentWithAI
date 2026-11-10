@@ -142,6 +142,11 @@ def test_main_log_matches_stdout(
 ) -> None:
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(cli, "_make_client", lambda: client_with(lambda request: httpx.Response(200)))
+
+    async def stop_after_first_sleep(seconds: float) -> None:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(cli, "_sleep", stop_after_first_sleep)
     assert cli.main(["https://example.test/ok"]) == 0
     logs = list(tmp_path.glob("url-monitor-*.log"))
     assert len(logs) == 1

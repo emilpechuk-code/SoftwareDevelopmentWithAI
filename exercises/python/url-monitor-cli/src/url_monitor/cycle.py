@@ -21,6 +21,7 @@ async def run_cycle(
     results = await check_urls(config.urls, config.timeout_seconds, client, now)
     for result in results:
         window.record(Sample(result.url, result.ok, result.checked_at))
+    window.drop_older_than(now)
     for result in results:
         previous = states.get(result.url, UrlState())
         state, changed = apply_result(previous, result, config.failure_threshold)

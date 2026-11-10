@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 @dataclass(frozen=True)
@@ -19,3 +19,8 @@ class SampleWindow:
     def uptime(self, url: str) -> tuple[int, int]:
         samples = self._samples.get(url, [])
         return sum(1 for sample in samples if sample.ok), len(samples)
+
+    def drop_older_than(self, now: datetime, window: timedelta = timedelta(hours=1)) -> None:
+        cutoff = now - window
+        for url, samples in self._samples.items():
+            self._samples[url] = [s for s in samples if s.checked_at >= cutoff]
