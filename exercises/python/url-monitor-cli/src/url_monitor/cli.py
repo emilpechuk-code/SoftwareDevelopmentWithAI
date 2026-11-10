@@ -8,6 +8,7 @@ import httpx
 
 from url_monitor.config import Config
 from url_monitor.cycle import run_cycle
+from url_monitor.state import UrlState
 from url_monitor.window import SampleWindow
 
 
@@ -78,8 +79,9 @@ def _make_client() -> httpx.AsyncClient:
 
 async def _run_once(config: Config, now: datetime, log) -> None:
     window = SampleWindow()
+    states: dict[str, UrlState] = {}
     async with _make_client() as client:
-        await run_cycle(config, client, window, log, now)
+        await run_cycle(config, client, window, states, log, now)
 
 
 def main(argv: list[str] | None = None) -> int:

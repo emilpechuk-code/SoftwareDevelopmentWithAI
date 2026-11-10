@@ -16,6 +16,16 @@ def format_up(result: CheckResult) -> str:
     )
 
 
+def format_down(result: CheckResult, consecutive_failures: int) -> str:
+    reason = (
+        f"HTTP {result.status_code}" if result.status_code is not None else result.error
+    )
+    return (
+        f"[{_ts(result.checked_at)}] {'DOWN':<6} {result.url}  "
+        f"({consecutive_failures} consecutive failures, last: {reason})"
+    )
+
+
 def format_uptime(url: str, successes: int, total: int, at: datetime) -> str:
     percent = successes / total * 100
     return (

@@ -39,7 +39,7 @@ def run(handler, *urls: str) -> str:
 
     async def once() -> None:
         async with client_with(handler) as client:
-            await run_cycle(config_for(*urls), client, SampleWindow(), buffer, NOW)
+            await run_cycle(config_for(*urls), client, SampleWindow(), {}, buffer, NOW)
 
     asyncio.run(once())
     return buffer.getvalue()
