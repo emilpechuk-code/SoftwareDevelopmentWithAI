@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "url-monitor"
+version = "0.1.0"
+description = "Check URLs on a schedule and report state changes and 1-hour uptime"
+requires-python = ">=3.11"
+dependencies = ["httpx>=0.27"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+url-monitor = "url_monitor.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/url_monitor"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
