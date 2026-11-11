@@ -819,8 +819,8 @@ def test_core_never_names_a_concrete_game():
 
 ### Verification
 #### Automated
-- [ ] `uv run pytest tests/core tests/test_api.py tests/test_pluggable.py -q` passes
-- [ ] `uv run pytest -q` passes (Phase 1 tests still green)
+- [x] `uv run pytest tests/core tests/test_api.py tests/test_pluggable.py -q` passes
+- [x] `uv run pytest -q` passes (Phase 1 tests still green)
 
 #### Manual
 - [ ] `uv run uvicorn gamer.app:app --reload`; `/` → Othello → "Create hot-seat game" opens `/play/othello?session=<id>`
