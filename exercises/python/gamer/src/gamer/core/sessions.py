@@ -10,6 +10,8 @@ from gamer.core.registry import GameRegistry
 
 MODES = ("online", "hotseat")
 MAX_NAME = 40
+CONNECTED_TIMEOUT = 10.0
+WAITING_TTL = 60.0
 
 
 class SessionError(Exception):
@@ -28,7 +30,7 @@ class SeatState:
     was_connected: bool = False
 
     def connected(self, now: float) -> bool:
-        return self.token is not None
+        return self.last_seen is not None and now - self.last_seen <= CONNECTED_TIMEOUT
 
 
 @dataclass
@@ -68,6 +70,7 @@ class SessionManager:
     def create(self, game_id: str, mode: str, name: str | None) -> dict:
         with self._lock:
             now = self._clock()
+            self._sweep(now)
             game = self._game(game_id)
             if mode not in MODES:
                 raise SessionError("bad_request", f"mode must be one of: {', '.join(MODES)}")
@@ -85,8 +88,10 @@ class SessionManager:
     def poll(self, session_id: str, token: str | None, since: int | None) -> dict:
         with self._lock:
             now = self._clock()
+            self._sweep(now)
             session = self._session(session_id)
-            self._seat_index(session, token)
+            seat = self._seat_index(session, token)
+            self._touch(session, seat, now)
             if since == session.version:
                 return {"type": "no_change", "version": session.version}
             return session.envelope(now)
@@ -94,8 +99,10 @@ class SessionManager:
     def move(self, session_id: str, token: str | None, move: Move) -> dict:
         with self._lock:
             now = self._clock()
+            self._sweep(now)
             session = self._session(session_id)
             seat = self._seat_index(session, token)
+            self._touch(session, seat, now)
             if session.status == "waiting":
                 raise SessionError("not_your_turn", "Waiting for an opponent to join")
             if session.status == "finished":
@@ -114,6 +121,7 @@ class SessionManager:
     def join(self, session_id: str, name: str | None) -> dict:
         with self._lock:
             now = self._clock()
+            self._sweep(now)
             session = self._session(session_id)
             free = next((s for s in session.seats if s.token is None), None)
             if session.mode != "online" or free is None:
@@ -126,11 +134,39 @@ class SessionManager:
 
     def list_waiting(self, game_id: str) -> list[dict]:
         with self._lock:
+            self._sweep(self._clock())
             self._game(game_id)
             waiting = [s for s in self._sessions.values()
                        if s.game.id == game_id and s.mode == "online" and s.status == "waiting"]
             return [{"session_id": s.id, "host": s.seats[0].name}
                     for s in sorted(waiting, key=lambda s: s.created_at)]
+
+    def _touch(self, session: Session, seat_index: int, now: float) -> None:
+        seats = session.seats if session.mode == "hotseat" else [session.seats[seat_index]]
+        reconnected = False
+        for seat in seats:
+            seat.last_seen = now
+            if not seat.was_connected:
+                seat.was_connected = True
+                reconnected = True
+        if reconnected:
+            session.version += 1
+
+    def _sweep(self, now: float) -> None:
+        for session_id, session in list(self._sessions.items()):
+            claimed = [s for s in session.seats if s.token is not None]
+            changed = False
+            for seat in claimed:
+                connected = seat.connected(now)
+                if connected != seat.was_connected:
+                    seat.was_connected = connected
+                    changed = True
+            if changed:
+                session.version += 1
+            if session.status == "waiting" and all(now - s.last_seen > WAITING_TTL for s in claimed):
+                del self._sessions[session_id]
+            elif session.status == "finished" and not any(s.was_connected for s in claimed):
+                del self._sessions[session_id]
 
     def _claim(self, seat: SeatState, name: str | None, now: float) -> None:
         cleaned = (name or "").strip()[:MAX_NAME]

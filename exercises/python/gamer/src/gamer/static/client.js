@@ -38,8 +38,8 @@ function statusMessage(env) {
 function statusLines(env, seats) {
   const mine = new Set(seats.map((s) => s.seat));
   const players = env.seats.map((s) => el("span", {
-    className: `seat ${s.label}${env.turn === s.label ? " to-move" : ""}`,
-    textContent: `${s.name} (${s.label})${mine.has(s.label) ? " – you" : ""}`,
+    className: `seat ${s.label}${env.turn === s.label ? " to-move" : ""}${s.connected ? "" : " disconnected"}`,
+    textContent: `${s.name} (${s.label})${mine.has(s.label) ? " – you" : ""}${s.connected ? "" : " (disconnected)"}`,
   }));
   const lines = [el("p", {}, ...players), el("p", { textContent: statusMessage(env) })];
   if (env.mode === "online" && env.status === "waiting") {

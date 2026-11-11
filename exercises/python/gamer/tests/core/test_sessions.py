@@ -144,3 +144,93 @@ def test_list_waiting_shows_only_open_online_sessions(manager):
     with pytest.raises(SessionError) as exc:
         manager.list_waiting("chess")
     assert exc.value.code == "unknown_game"
+
+
+class FakeClock:
+    def __init__(self) -> None:
+        self.now = 1000.0
+
+    def __call__(self) -> float:
+        return self.now
+
+    def advance(self, seconds: float) -> None:
+        self.now += seconds
+
+
+@pytest.fixture
+def clock():
+    return FakeClock()
+
+
+@pytest.fixture
+def timed(clock):
+    return SessionManager(GameRegistry([OthelloGame()]), clock=clock)
+
+
+def online_pair(timed) -> tuple[str, str, str]:
+    created = timed.create("othello", "online", "Ann")
+    sid = created["session_id"]
+    return sid, created["seats"][0]["token"], timed.join(sid, "Bob")["token"]
+
+
+def test_silent_seat_becomes_disconnected(timed, clock):
+    sid, a, _ = online_pair(timed)
+    clock.advance(5)
+    version = timed.poll(sid, a, None)["version"]
+    clock.advance(6)
+    env = timed.poll(sid, a, version)
+    assert env["type"] == "state"
+    assert env["version"] > version
+    assert env["seats"][1]["connected"] is False
+    assert env["seats"][0]["connected"] is True
+
+
+def test_poll_with_token_reclaims_seat(timed, clock):
+    sid, a, b = online_pair(timed)
+    clock.advance(5)
+    timed.poll(sid, a, None)
+    clock.advance(6)
+    version = timed.poll(sid, a, None)["version"]
+    env = timed.poll(sid, b, None)
+    assert env["seats"][1]["connected"] is True
+    assert env["version"] == version + 1
+
+
+def test_hotseat_poll_keeps_both_seats_connected(timed, clock):
+    created = timed.create("othello", "hotseat", None)
+    sid, black = created["session_id"], tokens_of(created)["black"]
+    clock.advance(5)
+    timed.poll(sid, black, None)
+    clock.advance(6)
+    env = timed.poll(sid, black, None)
+    assert [s["connected"] for s in env["seats"]] == [True, True]
+
+
+def test_waiting_session_removed_after_ttl(timed, clock):
+    created = timed.create("othello", "online", "Ann")
+    clock.advance(61)
+    assert timed.list_waiting("othello") == []
+    with pytest.raises(SessionError) as exc:
+        timed.poll(created["session_id"], created["seats"][0]["token"], None)
+    assert exc.value.code == "unknown_session"
+
+
+def test_waiting_session_kept_while_host_polls(timed, clock):
+    created = timed.create("othello", "online", "Ann")
+    sid, token = created["session_id"], created["seats"][0]["token"]
+    clock.advance(30)
+    timed.poll(sid, token, None)
+    clock.advance(40)
+    assert timed.poll(sid, token, None)["status"] == "waiting"
+
+
+def test_finished_session_removed_when_everyone_gone(timed, clock):
+    created = timed.create("othello", "hotseat", None)
+    sid, tokens = created["session_id"], tokens_of(created)
+    play_to_end(timed, sid, tokens)
+    assert timed.poll(sid, tokens["black"], None)["status"] == "finished"
+    clock.advance(11)
+    timed.list_waiting("othello")
+    with pytest.raises(SessionError) as exc:
+        timed.poll(sid, tokens["black"], None)
+    assert exc.value.code == "unknown_session"

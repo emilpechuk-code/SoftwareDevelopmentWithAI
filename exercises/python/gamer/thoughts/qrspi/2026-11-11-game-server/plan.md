@@ -1058,8 +1058,8 @@ WAITING_TTL = 60.0
 
 ### Verification
 #### Automated
-- [ ] `uv run pytest tests/core -q` passes
-- [ ] `uv run pytest -q` passes (all phases)
+- [x] `uv run pytest tests/core -q` passes
+- [x] `uv run pytest -q` passes (all phases)
 
 #### Manual
 - [ ] Online game in two browsers; close browser B: within about 10 s browser A shows B's name greyed with "(disconnected)"

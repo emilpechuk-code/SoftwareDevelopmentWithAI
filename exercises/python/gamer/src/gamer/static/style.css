@@ -6,3 +6,4 @@ input, select, button { font: inherit; margin: 0.25rem 0.5rem 0.25rem 0; }
 .status .seat { margin-right: 1rem; }
 .status .to-move { font-weight: bold; }
 .share input { width: 100%; max-width: 32rem; }
+.status .disconnected { color: #888; }
