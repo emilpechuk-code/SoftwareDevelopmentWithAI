@@ -6,7 +6,8 @@ Paths are relative to `exercises/python/gamer/`. For what the project is, see [S
 
 - **v1 game server is done.** All four phases of `thoughts/qrspi/2026-11-11-game-server/plan.md`
   are committed (`fad27a9`, `0566c91`, `4f6700b`, `0fe4f11`). Requirements R1–R6 are met.
-- **Tests:** 47 pass (`.venv\Scripts\python.exe -m pytest -q`). One harmless Starlette
+- **Tests:** 93 pass (`.venv\Scripts\python.exe -m pytest -q`), 46 of them robustness tests in
+  `tests/robustness/` built on the `MockPlayer` mock client. One harmless Starlette
   deprecation warning about `httpx`.
 - **Per-module subagents are defined** in `.cursor/agents/` (uncommitted): `contract-owner`,
   `sessions-owner`, `api-owner`, `othello-owner`, `client-owner`. Each lists the files it owns,

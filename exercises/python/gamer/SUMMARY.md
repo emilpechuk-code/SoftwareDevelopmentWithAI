@@ -63,5 +63,7 @@ never computes legality.
 
 ## Status
 
-v1 is complete and all 47 tests pass. The 16x16 board is planned but not implemented. See
+v1 is complete and all 93 tests pass, including 46 robustness tests in `tests/robustness/` that
+drive the server with a mock client (parallel games, stalled connections, racing moves and joins,
+malformed input, disconnects, random-game soak). The 16x16 board is planned but not implemented. See
 [HANDOFF.md](HANDOFF.md) for next steps.
