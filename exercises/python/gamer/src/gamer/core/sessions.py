@@ -111,6 +111,27 @@ class SessionManager:
             session.version += 1
             return session.envelope(now)
 
+    def join(self, session_id: str, name: str | None) -> dict:
+        with self._lock:
+            now = self._clock()
+            session = self._session(session_id)
+            free = next((s for s in session.seats if s.token is None), None)
+            if session.mode != "online" or free is None:
+                raise SessionError("seat_taken", "This game has no open seat")
+            self._claim(free, name, now)
+            if all(s.token is not None for s in session.seats):
+                session.status = "playing"
+            session.version += 1
+            return {"seat": free.label, "token": free.token}
+
+    def list_waiting(self, game_id: str) -> list[dict]:
+        with self._lock:
+            self._game(game_id)
+            waiting = [s for s in self._sessions.values()
+                       if s.game.id == game_id and s.mode == "online" and s.status == "waiting"]
+            return [{"session_id": s.id, "host": s.seats[0].name}
+                    for s in sorted(waiting, key=lambda s: s.created_at)]
+
     def _claim(self, seat: SeatState, name: str | None, now: float) -> None:
         cleaned = (name or "").strip()[:MAX_NAME]
         seat.name = cleaned or seat.label.title()

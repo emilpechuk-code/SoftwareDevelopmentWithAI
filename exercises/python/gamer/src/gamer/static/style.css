@@ -5,3 +5,4 @@ input, select, button { font: inherit; margin: 0.25rem 0.5rem 0.25rem 0; }
 #error { color: #b00020; min-height: 1.5em; }
 .status .seat { margin-right: 1rem; }
 .status .to-move { font-weight: bold; }
+.share input { width: 100%; max-width: 32rem; }

@@ -976,8 +976,8 @@ class JoinSession(BaseModel):
 
 ### Verification
 #### Automated
-- [ ] `uv run pytest tests/core tests/test_api.py -q` passes
-- [ ] `uv run pytest -q` passes
+- [x] `uv run pytest tests/core tests/test_api.py -q` passes
+- [x] `uv run pytest -q` passes
 
 #### Manual
 - [ ] Browser 1 creates an Online game: the session page shows "Waiting for an opponent" and a share link; reloading resumes without a prompt

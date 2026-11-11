@@ -31,6 +31,10 @@ class MoveRequest(BaseModel):
     move: dict
 
 
+class JoinSession(BaseModel):
+    name: str | None = None
+
+
 def create_app(games: Iterable[Game] | None = None, clock: Callable[[], float] = time.monotonic) -> FastAPI:
     registry = GameRegistry(GAMES if games is None else games)
     app = FastAPI(title="Gamer")
@@ -51,9 +55,17 @@ def create_app(games: Iterable[Game] | None = None, clock: Callable[[], float] =
             "games": [{"id": g.id, "name": g.name, "seats": list(g.seats)} for g in registry.all()],
         }
 
+    @app.get("/api/games/{game_id}/sessions")
+    def waiting_sessions(game_id: str):
+        return {"type": "sessions", "sessions": manager.list_waiting(game_id)}
+
     @app.post("/api/games/{game_id}/sessions")
     def create_session(game_id: str, body: CreateSession):
         return manager.create(game_id, body.mode, body.name)
+
+    @app.post("/api/sessions/{session_id}/join")
+    def join_session(session_id: str, body: JoinSession):
+        return manager.join(session_id, body.name)
 
     @app.get("/api/sessions/{session_id}/state")
     def session_state(session_id: str, x_player_token: Token = None, since: int | None = None):

@@ -102,3 +102,45 @@ def test_game_finishes_and_rejects_further_moves(manager):
     with pytest.raises(SessionError) as exc:
         manager.move(sid, tokens["black"], {"row": 0, "col": 0})
     assert exc.value.code == "game_over"
+
+
+def test_join_fills_second_seat(manager):
+    created = manager.create("othello", "online", "Ann")
+    sid, ann = created["session_id"], created["seats"][0]["token"]
+    env = manager.poll(sid, ann, None)
+    assert env["status"] == "waiting"
+    assert env["turn"] is None
+    with pytest.raises(SessionError) as exc:
+        manager.move(sid, ann, {"row": 2, "col": 3})
+    assert exc.value.code == "not_your_turn"
+    joined = manager.join(sid, "Bob")
+    assert joined["seat"] == "white"
+    after = manager.poll(sid, joined["token"], None)
+    assert after["status"] == "playing"
+    assert after["version"] == env["version"] + 1
+
+
+def test_third_join_is_seat_taken(manager):
+    sid = manager.create("othello", "online", "Ann")["session_id"]
+    manager.join(sid, "Bob")
+    with pytest.raises(SessionError) as exc:
+        manager.join(sid, "Cat")
+    assert exc.value.code == "seat_taken"
+
+
+def test_join_hotseat_is_seat_taken(manager):
+    sid = manager.create("othello", "hotseat", None)["session_id"]
+    with pytest.raises(SessionError) as exc:
+        manager.join(sid, "Bob")
+    assert exc.value.code == "seat_taken"
+
+
+def test_list_waiting_shows_only_open_online_sessions(manager):
+    waiting = manager.create("othello", "online", "Ann")["session_id"]
+    manager.create("othello", "hotseat", "Hal")
+    joined = manager.create("othello", "online", "Jo")["session_id"]
+    manager.join(joined, "Bob")
+    assert manager.list_waiting("othello") == [{"session_id": waiting, "host": "Ann"}]
+    with pytest.raises(SessionError) as exc:
+        manager.list_waiting("chess")
+    assert exc.value.code == "unknown_game"

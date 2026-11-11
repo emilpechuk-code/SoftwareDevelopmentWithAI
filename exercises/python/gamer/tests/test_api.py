@@ -62,6 +62,33 @@ def test_error_status_codes(client):
         assert res.json()["code"] == code
 
 
+def test_online_game_over_http(client):
+    created = client.post("/api/games/othello/sessions", json={"mode": "online", "name": "Ann"}).json()
+    sid = created["session_id"]
+    tokens = {s["seat"]: s["token"] for s in created["seats"]}
+    listed = client.get("/api/games/othello/sessions").json()["sessions"]
+    assert {"session_id": sid, "host": "Ann"} in listed
+    res = client.post(f"/api/sessions/{sid}/join", json={"name": "Bob"})
+    assert res.status_code == 200
+    tokens[res.json()["seat"]] = res.json()["token"]
+    listed = client.get("/api/games/othello/sessions").json()["sessions"]
+    assert all(s["session_id"] != sid for s in listed)
+    res = client.post(f"/api/sessions/{sid}/moves", json={"move": {"row": 2, "col": 3}},
+                      headers={"X-Player-Token": tokens["white"]})
+    assert res.status_code == 409
+    assert res.json()["code"] == "not_your_turn"
+    env = play_to_end(client, sid, tokens)
+    assert env["status"] == "finished"
+
+
+def test_join_full_session_409(client):
+    sid = client.post("/api/games/othello/sessions", json={"mode": "online"}).json()["session_id"]
+    assert client.post(f"/api/sessions/{sid}/join", json={}).status_code == 200
+    res = client.post(f"/api/sessions/{sid}/join", json={})
+    assert res.status_code == 409
+    assert res.json()["code"] == "seat_taken"
+
+
 def test_play_page_and_view_served(client):
     assert client.get("/play/othello").status_code == 200
     assert client.get("/play/nope").status_code == 404
