@@ -44,7 +44,8 @@ background tasks. Diagrams are in `thoughts/qrspi/2026-11-11-game-server/`
 | Othello | `games/othello/**` (rules plus board view) | `othello-owner` |
 | Client shell | `static/*.html`, `client.js`, `style.css` | `client-owner` |
 
-The agent definitions are in `.cursor/agents/`. The main boundary rules are that the core
+The agent definitions are in `.cursor/agents/`, and [SKILLS_AND_AGENTS.md](SKILLS_AND_AGENTS.md)
+describes them along with the QRSPI skills. The main boundary rules are that the core
 never imports a game, the rules never import FastAPI or the session code, and the client
 never computes legality.
 
