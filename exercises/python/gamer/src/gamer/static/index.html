@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Gamer</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header><h1>Gamer</h1></header>
+  <ul id="games"></ul>
+  <script type="module">
+    const list = document.getElementById("games");
+    const { games } = await (await fetch("/api/games")).json();
+    list.replaceChildren(...games.map((g) => {
+      const link = Object.assign(document.createElement("a"), { href: `/play/${g.id}`, textContent: g.name });
+      const item = document.createElement("li");
+      item.append(link);
+      return item;
+    }));
+  </script>
+</body>
+</html>
